@@ -1,24 +1,37 @@
 import sqlite3
+import os
+import typer
 
-def connect(db):
-    return sqlite3.connect(db)
+app = typer.Typer()
 
-def exec(db,*,code):
-    cur = db.cursor()
-    cur.execute(code)
-    db.commit()
+@app.command()
+def main(file:str=None):
+    if file:
+        fname,fext = os.path.splitext(file)
+        db = sqlite3.connect(fname+".db")
+        sql = open(file).read()
+        cur = db.cursor()
+        for statement in sql.split(";"):
+            cur.execute(statement)
+            print(cur.fetchall())
+            db.commit()
 
-def mainloop(__prompt):
-    print("PySQL-Bash 1.9.2")
-    print("Creator: DS_Stift007 (https://github.com/Stift007/sqlbash)")
-    db = connect(input("Enter Database Name: "))
-    while True:
-        print(__prompt)
-        cmd = input("$ ")
-        if cmd=="RET":
-            break
-        else:
-            exec(db=db,code=cmd)
-
-if __name__ == "__main__":
-        mainloop("sql@sql-bash.localhost:5000")
+    else:
+        db = sqlite3.connect(":memory:")
+        while True:
+            cmd = input("sqlite3> ")
+            if cmd.startswith("connect"):
+                try:
+                    com, conn = cmd.split(" ")
+                    db = sqlite3.connect(conn)
+                except Exception as error:
+                    print(error)
+            elif cmd == "sql":
+                cur = db.cursor()
+                cur.execute(input("> "))
+                print(cur.fetchall())
+            elif cmd == "commit":
+                db.commit()
+            elif cmd == "exit":
+                break;
+app()
